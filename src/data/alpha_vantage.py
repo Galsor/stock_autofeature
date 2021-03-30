@@ -73,8 +73,7 @@ def get_data_from_alpha_vantage(symbol, mode="daily", adjusted=False, interval='
             time.sleep(1)
     if ping == 3:
         raise ConnectionError("Impossible to connect to Alpha Vantage API.")
-    
     if mode != "symbol_search":
-      data.columns = ["open", "high", "low", "close", "volume"]
+      data = data.rename(columns = cfg.RENAME_AV_COLUMNS)
       data = data.reset_index()
     return data, meta_data

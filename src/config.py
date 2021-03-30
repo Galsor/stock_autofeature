@@ -13,12 +13,30 @@ BREAKEVEN = 0.003
 #Columns names
 DATE = "date"
 OPEN = "open"
-HIGH = "high",
+HIGH = "high"
 LOW = "low"
 CLOSE = "close"
-VOL = "volume"
+VOLUME = "volume"
 LABELS = "labels"
 NEXT_DAY_EVOLUTION = "next_day_evolution"
 NEXT_DAY_EVOLUTION_RATIO = "next_day_evolution_ratio"
 
-OHLCV_COLUMNS_NAME = [DATE, OPEN, HIGH, LOW, CLOSE, VOL]
+DOHLCV = [DATE, OPEN, HIGH, LOW, CLOSE, VOLUME]
+DOHLC = [DATE, OPEN, HIGH, LOW, CLOSE]
+OHLC = [OPEN, HIGH, LOW, CLOSE, VOLUME]
+OHLCV = [OPEN, HIGH, LOW, CLOSE]
+
+RENAME_AV_COLUMNS = {
+    "1. open": OPEN,
+    "2. high": HIGH,
+    "3. low": LOW,
+    "4. close": CLOSE,
+    "5. volume": VOLUME
+    }
+
+#Alpha vantage metadata dictionnary keys
+META_INFORMATION = '1. Information'
+META_SYMBOL = '2. Symbol'
+META_LAST_REFRESH = '3. Last Refreshed'
+META_OUTPUT_SIZE = '4. Output Size'
+META_TIME_ZONE = '5. Time Zone'
