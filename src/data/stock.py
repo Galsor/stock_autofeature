@@ -6,6 +6,7 @@ from src.data.alpha_vantage import get_data_from_alpha_vantage
 class Stock:
     def __init__(self, symbol:str, mode:str="daily", adjusted:bool=False, interval:str='15min', outputsize:str='compact') -> None:
         self._dohlcv, metadata = get_data_from_alpha_vantage(symbol= symbol)
+        self._dohlcv.sort_index(ascending=False, inplace=True)
         self.symbol = metadata[cfg.META_SYMBOL]
         self.tz = metadata[cfg.META_TIME_ZONE]
     
