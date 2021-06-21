@@ -9,6 +9,47 @@ dotenv.load_dotenv(DOTENV_PATH)
 # Seuil de rentabilité d'une évolution quotidienne
 BREAKEVEN = 0.003
 
+#Features generator parameters
+SCALING_WINDOW = 10
+FINTA_COLS = None # To Be filled when finta_transformer class instance is fitted
+SCALERS_NAMES = None # To Be filled when scalers.py is loaded
+SCALED_COLS = None
+DISTANCES_NAMES = None # To Be filled when distances.py is loaded
+DISTANCED_COLS = None
+PASSTHROUGH_NAME = "passthrough"
+
+SORT_STOCK_ASCENDING = False
+SHIFT = 1 if SORT_STOCK_ASCENDING else -1
+
+
+DAILY_COMPACT = {
+    "mode":"daily",
+    "adjusted":False,
+    "outputsize":'compact'
+} 
+
+DAILY_FULL = {
+    "mode":"daily",
+    "adjusted":False,
+    "outputsize":'full'
+}
+
+INTRADAY_15MIN_FULL ={
+    "mode":"intraday",
+    "adjusted":False,
+    "interval":'15min',
+    "outputsize":'full'
+}
+
+INTRADAY_1MIN_FULL ={
+    "mode":"intraday",
+    "adjusted":False,
+    "interval":'1min',
+    "outputsize":'full'
+}
+
+
+STOCK_SETTINGS = DAILY_COMPACT
 
 #Columns names
 DATE = "date"
