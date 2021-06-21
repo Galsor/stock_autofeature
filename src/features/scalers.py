@@ -1,9 +1,11 @@
 import pandas as pd
 import logging
 from pandas.core.series import Series
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.pipeline import FeatureUnion
 
+from src.features.passthrough import PASSTHROUGH_TRANSFORMER
 import src.config as cfg
 
 
@@ -134,9 +136,8 @@ class MovingMinMaxScaler(TransformerMixin, BaseEstimator):
     This class is design to be used in scikit-learn pipeline
     """
 
-    def __init__(self, window):
+    def __init__(self, window) -> None:
         self.window = window
-        pass
 
     def fit(self, X, y=None):
         """Save the end of training dataset as buffer for further completion of partial window during transform.
@@ -162,7 +163,7 @@ class MovingMinMaxScaler(TransformerMixin, BaseEstimator):
 
         return self
 
-    def transform(self, X):
+    def transform(self, X) -> pd.DataFrame:
         """Scale features of X according to the local min and max values.
         If X contains less values than window size, X is completed with previous values saved in buffer.
         Parameters
@@ -210,6 +211,43 @@ def moving_low_high_scaler(ohlc:pd.DataFrame, window:int=10) -> pd.DataFrame:
     maxs = ohlc[cfg.HIGH].rolling(window).max()
     return ohlc.apply(lambda x: (x - mins)/(maxs - mins))
 
+SCALERS = [
+    (cfg.PASSTHROUGH_NAME, PASSTHROUGH_TRANSFORMER),
+    ("standard_scaler", StandardScaler()),
+    ("minmax_scaler", MinMaxScaler()),
+    ("moving_standard_scaler",MovingStandardScaler(window=cfg.SCALING_WINDOW)),
+    ("moving_minmax_scaler", MovingMinMaxScaler(window=cfg.SCALING_WINDOW)),
+]
+
+cfg.SCALERS_NAMES = [s[0] for s in SCALERS]
+
+SCALERS_TRANSFORMERS = FeatureUnion(SCALERS)
+
+def reformat_scaling_output(X):
+
+    # Convert numpy or Series in DataFrame
+    if isinstance(X, pd.Series):
+        X = pd.DataFrame(X)
+        X = X.T
+    if not isinstance(X, pd.DataFrame):
+        X = pd.DataFrame(X)
+    
+    print(X.columns)
+
+    # Rename columns
+    scaled_columns = []
+    for scaler in cfg.SCALERS_NAMES:
+        if scaler != cfg.PASSTHROUGH_NAME:
+            for ind in cfg.CURRENT_COLS:
+                scaled_columns.append(str(ind+"_"+scaler))
+    
+    cfg.CURRENT_COLS += scaled_columns 
+    X.columns = cfg.CURRENT_COLS
+    cfg.SCALED_COLS = cfg.CURRENT_COLS
+    return X
+
+SCALER_OUTPUT_FORMATER = FunctionTransformer(reformat_scaling_output)
+
 if __name__ == "__main__":
     from src.data.stock import Stock
     from src.visualization.ohlcv import candlestick
@@ -219,7 +257,7 @@ if __name__ == "__main__":
     
     X, last = stock.ohlc.iloc[:-1], stock.ohlc.iloc[-1]
     print(X)
-    st_sc = MovingStandardScaler(window=10).fit(X)
+    """st_sc = MovingStandardScaler(window=10).fit(X)
     X_std = st_sc.transform(X)
     print(X_std)
 
@@ -232,7 +270,10 @@ if __name__ == "__main__":
     print("_"*80)
     print(last)
     print(st_sc.transform(last))
-    print(mm_sc.transform(last))
+    print(mm_sc.transform(last))"""
+    print(SCALERS_TRANSFORMERS.fit_transform(X))
+
+    print(SCALERS_TRANSFORMERS.transformer_list[:][0])
 
 
 
