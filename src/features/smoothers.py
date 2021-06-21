@@ -1,10 +1,15 @@
+""" This file describes functions and classes
+ performing smooting operations on prices or features"""
+
 import numpy as np
 import pandas as pd
 from math import ceil
 from scipy import linalg
 import logging  
+from numbers import Number
+from sklearn.preprocessing import FunctionTransformer
 
-def lowess(df:pd.DataFrame) -> pd.DataFrame:
+def lowess(df:pd.DataFrame, period:int=10, iter:int=3) -> pd.DataFrame:
     """
         Lowess smooth method.
         This methods implements Alexandre Gramfort's method detailed in the embedded to apply a smoothing filter for the `period` amount of values prior the given point.
@@ -14,6 +19,9 @@ def lowess(df:pd.DataFrame) -> pd.DataFrame:
         ---------
         df: pd.DataFrame
             Data
+        period: int
+            Amount of previous period used for smoothing
+        
         
         Returns
         --------
@@ -38,7 +46,8 @@ def lowess(df:pd.DataFrame) -> pd.DataFrame:
             The smoothed serie
 
         """
-        if  type(y[0])
+        if not isinstance(y[0], Number):
+            return y
 
         x = np.arange(len(y))
         f = 1./(len(y)/period)
@@ -71,8 +80,17 @@ def lowess(df:pd.DataFrame) -> pd.DataFrame:
 
         return yest
 
-    smoothed_df = df.apply(lowess_agf)
+    smoothed_df = df.apply(lowess_agf, args=(period, iter))
     return smoothed_df
+
+LOWESS_TRANSFORMER = FunctionTransformer(lowess, kw_args = {"window":3})
+
+
+def SMA(df:pd.DataFrame, window:int) -> pd.DataFrame:
+    return df.rolling(window).mean()
+
+SMA3_TRANSFORMER = FunctionTransformer(SMA, kw_args = {"period":3, "iter":3})
+
 
 if __name__ == "__main__":
     from src.data.stock import Stock
