@@ -11,6 +11,7 @@ BREAKEVEN = 0.003
 
 #Features generator parameters
 SCALING_WINDOW = 10
+CURRENT_COLS = None # To be filled after each step of the transformation
 FINTA_COLS = None # To Be filled when finta_transformer class instance is fitted
 SCALERS_NAMES = None # To Be filled when scalers.py is loaded
 SCALED_COLS = None
