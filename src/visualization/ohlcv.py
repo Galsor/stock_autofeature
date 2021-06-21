@@ -1,6 +1,8 @@
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 
+import src.config as cfg
+
 def candlestick(df, title = "stock_candlestick"):
   """
   df : pandas.DataFrame
@@ -8,13 +10,19 @@ def candlestick(df, title = "stock_candlestick"):
   title : str
      Title of the chart
   """
+  
+  has_volumes = cfg.VOLUME in df.columns
+  if df.index.name == cfg.DATE:
+    df = df.reset_index()
+
   #Configures traces for prices and volume
-  ohlc = go.Candlestick(x=df["date"],
-                      open=df["open"],
-                      high=df["high"],
-                      low=df["low"],
-                      close=df["close"])
-  volume = go.Bar(x=df.date,y=df["volume"])
+  ohlc = go.Candlestick(x=df[cfg.DATE],
+                      open=df[cfg.OPEN],
+                      high=df[cfg.HIGH],
+                      low=df[cfg.LOW],
+                      close=df[cfg.CLOSE])
+  if has_volumes:
+    volume = go.Bar(x=df.date,y=df[cfg.VOLUME])
 
   #configure subplot with a grid of 4 rows and 1 column. OHLC will take 3 rows heigh
   fig = make_subplots(rows=4, cols=1,
@@ -29,7 +37,8 @@ def candlestick(df, title = "stock_candlestick"):
                 )
   #Add the 2 subplots
   fig.append_trace(ohlc, 1, 1)
-  fig.append_trace(volume, 4, 1)
+  if has_volumes:
+    fig.append_trace(volume, 4, 1)
 
   fig['layout'].update(
             title=f'{title}',
