@@ -8,6 +8,7 @@ from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 
 import src.config as cfg
+from src.features.nan_handlers import drop_unconsistant_columns
 
 FINTA_METHODS = inspect.getmembers(TA, predicate=inspect.isfunction)
 
@@ -52,11 +53,17 @@ def compute_finta_metrics(ohlcv: pd.DataFrame) -> pd.DataFrame:
     logging.info(f"{error_count} errors occured during finta features generation ({round(error_count/len(FINTA_METHODS)*100,2)}% of methods).")
     
     finta_ind = pd.concat(inds, axis=1, ignore_index=False)
-    cfg.FINTA_COLS = cfg.CURRENT_COLS = list(finta_ind.columns)
-    return finta_ind
+    finta_ind = drop_unconsistant_columns(finta_ind)
+    
+    #Set up columns filter to enjure output shape consistency
+    if cfg.FINTA_COLS is None:
+        #Initialisation
+        cfg.FINTA_COLS = list(finta_ind.columns)
+    else:
+        #During prediction select only columns validated during training
+        finta_ind = finta_ind[cfg.FINTA_COLS]
 
-#DEPRECATED - Prefer using FintaTransformer Class
-#FINTA_TRANSFORMER = FunctionTransformer(compute_finta_metrics)
+    return finta_ind
 
 
 class FintaTransformer(TransformerMixin, BaseEstimator):
@@ -65,10 +72,12 @@ class FintaTransformer(TransformerMixin, BaseEstimator):
         This class is design to be used in scikit-learn pipeline
 
     """
-    def __init__(self) -> None:
+    def __init__(self, buffer_size:int=98) -> None:
         super().__init__()
-        self.buffer_size = 99 # Amount of past values needed to compute all indicators
+        self.buffer_size = buffer_size # Amount of past values needed to compute all indicators
         self._buffer = []
+        self.input_columns = None
+        self.output_columns = None
 
     def fit(self, X, y=None):
         """Save the end of training dataset as buffer for further completion of partial window during transform.
@@ -84,8 +93,10 @@ class FintaTransformer(TransformerMixin, BaseEstimator):
         self : object
             Fitted scaler.
         """
+        
         if isinstance(X, pd.DataFrame):
             self._buffer = X.iloc[-self.buffer_size:]
+            self.input_columns = X.columns
         else:
             try:
                 self._buffer = X[-self.buffer_size :]
@@ -93,7 +104,7 @@ class FintaTransformer(TransformerMixin, BaseEstimator):
                 raise KeyError("X must be an array-like type and preferably pd.DataFrame")
         return self
 
-    def transform(self, X) -> pd.DataFrame:
+    def transform(self, X, y=None) -> pd.DataFrame:
         """Scale features of X according to the local min and max values.
         If X contains less values than buffer_size size, X is completed with previous values saved in buffer.
         Parameters
@@ -105,9 +116,10 @@ class FintaTransformer(TransformerMixin, BaseEstimator):
         Xt : ndarray of shape (n_samples, n_features)
             Transformed data.
         """
+        print(f"--- transform {self.__class__.__name__} ---")
         if not isinstance(X, pd.DataFrame) and not isinstance(X, pd.Series):
-            X = pd.DataFrame(X)
-        
+            X = pd.DataFrame(X, columns=self.input_columns)
+
         n = len(X) if not isinstance(X, pd.Series) else 1
 
         if n < self.buffer_size:
@@ -120,7 +132,7 @@ class FintaTransformer(TransformerMixin, BaseEstimator):
         self._buffer = X.iloc[-self.buffer_size:]
 
         X_tr = compute_finta_metrics(X_tr)
-        return X_tr.iloc[-n:] 
+        return X_tr.iloc[-n:]
 
 FINTA_TRANSFORMER = FintaTransformer()
 

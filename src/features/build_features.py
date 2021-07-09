@@ -1,63 +1,67 @@
-from numpy.lib.function_base import percentile
+import logging
+
+from dotenv.main import find_dotenv, load_dotenv
+from src.data.stock import Stock
+import click
 import pandas as pd
 from sklearn.pipeline import Pipeline
-from sklearn.feature_selection import SelectPercentile, chi2
 from sklearn.preprocessing import FunctionTransformer
 
 from src.features.scalers import SCALERS_TRANSFORMERS,SCALER_OUTPUT_FORMATER
 from src.features.finta_transformer import FINTA_TRANSFORMER
-from src.features.unconsistant_data_droper import UNCONSISTANT_FEATURE_DROPER
-from src.features.distances import DISTANCES_TRANSFORMERS
+from src.features.nan_handlers import OFFSET_NAN_DROPER, UnconsistantColumnDroper
+from src.features.distances import DISTANCES_OUTPUT_FORMATER, DISTANCES_TRANSFORMERS
 import src.config as cfg
 
 
-def log_step(df):
-    print(df.shape)
-    return df
+def log_step(o):
+    if isinstance(o, pd.DataFrame):
+        print("--- Shape of dataset: ",  o.shape)
+    elif isinstance(o, tuple):
+        print("--- Shape of dataset: ",  o[0].shape)
+        if o[1] is not None:
+            print("--- Shape of labels: ",  o[1].shape)
+    return o
 LOGGING_STEP = FunctionTransformer(log_step)
 
 
 """
-    Mix Finta features with scalers and select relevant features according to labels
+    Mix Finta features with scalers
 
 """
 #Les distances ne peuvent pas en état être ajoutées car elles font exploser
 # les dimensions de la matrice de feature qui ne peut plus tenir en rame
-# TODO: Ajouter un mécanisme de selection de feature au sein des transformers
 FEATURES_PIPELINE = Pipeline([
     ("finta", FINTA_TRANSFORMER),
-    ("drop1", UNCONSISTANT_FEATURE_DROPER),
-    ("log1", LOGGING_STEP),
+    ("clean_finta", UnconsistantColumnDroper(col_config_slot=cfg.FINTA_COLS)),
     ('scalers', SCALERS_TRANSFORMERS),
     ("scaler_output_formater", SCALER_OUTPUT_FORMATER),
-    #("drop2", UNCONSISTANT_FEATURE_DROPER),
-    #("log2", LOGGING_STEP),
+    ("clean_scaled", UnconsistantColumnDroper(col_config_slot=cfg.SCALED_COLS)),
     #("distances", DISTANCES_TRANSFORMERS),
-    #('anova', SelectPercentile(chi2, percentile=0.1))
+    #("distance_output_formater", DISTANCES_OUTPUT_FORMATER),
+    #("clean_distances", UnconsistantColumnDroper(cfg.DISTANCED_COLS)),
+    ("nan offset", OFFSET_NAN_DROPER),
     ], 
-    #memory=".pipeline_cache/"
+    verbose=True,
     )
 
+@click.command()
+@click.argument('symbol', type=click.String)
+def build_features(symbol:str, save=True):
+    stock = Stock(symbol)
+    X, y = stock.training_data
+    X_tr = FEATURES_PIPELINE.fit_transform(X,y)
+    if save:
+        X_tr.to_csv(index=False)
+    return X_tr
 
-
-def build_features(stock):
-    pass
 
 if __name__ == "__main__":
-    from src.data.stock import Stock
-    stock = Stock("aapl")
+    logging.basicConfig(**cfg.LOGGING_CONFIG)
+    load_dotenv(find_dotenv())
 
-    X, y = stock.training_data
-    X, X_last = X.iloc[:-1], X.iloc[-1]
-    y, y_last = y.iloc[:-1], y.iloc[-1]
-    X_tr = FEATURES_PIPELINE.fit_transform(X,y)
-    pred = FEATURES_PIPELINE.transform(X_last)
-    print(X_tr.shape)
-    #print(X_tr.columns)
-    print(pred)
-    print(X_tr.columns)
-    s = X_tr.isna().sum()/len(X_tr)
-    print(s.where(s!=1).mean())
-    #print(len(null_cols)/len(X_tr.shape[1]))
-    #print(null_cols)
+    build_features()
+
+
+    
 

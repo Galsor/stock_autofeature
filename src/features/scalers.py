@@ -5,8 +5,8 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, FunctionTransfor
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import FeatureUnion
 
-from src.features.passthrough import PASSTHROUGH_TRANSFORMER
 import src.config as cfg
+from src.features.passthrough import PASSTHROUGH_TRANSFORMER
 
 
 def moving_standard_scaler(df: pd.DataFrame, window:int=10) -> pd.DataFrame :
@@ -71,7 +71,7 @@ class MovingStandardScaler(TransformerMixin, BaseEstimator):
 
         return self
     
-    def transform(self, X, copy=None):
+    def transform(self, X, y=None, copy=None):
         """Perform standardization by centering and scaling
         Parameters
         ----------
@@ -84,6 +84,7 @@ class MovingStandardScaler(TransformerMixin, BaseEstimator):
         X_tr : {ndarray, sparse matrix} of shape (n_samples, n_features)
             Transformed array.
         """
+        print(f"--- transform {self.__class__.__name__} ---")
         if not isinstance(X, pd.DataFrame) and not isinstance(X, pd.Series):
             X = pd.DataFrame(X)
 
@@ -175,6 +176,7 @@ class MovingMinMaxScaler(TransformerMixin, BaseEstimator):
         Xt : ndarray of shape (n_samples, n_features)
             Transformed data.
         """
+        print(f"--- transform {self.__class__.__name__} ---")
         if not isinstance(X, pd.DataFrame) and not isinstance(X, pd.Series):
             X = pd.DataFrame(X)
         
@@ -232,8 +234,6 @@ def reformat_scaling_output(X):
     if not isinstance(X, pd.DataFrame):
         X = pd.DataFrame(X)
     
-    print(X.columns)
-
     # Rename columns
     scaled_columns = []
     for scaler in cfg.SCALERS_NAMES:
@@ -257,20 +257,6 @@ if __name__ == "__main__":
     
     X, last = stock.ohlc.iloc[:-1], stock.ohlc.iloc[-1]
     print(X)
-    """st_sc = MovingStandardScaler(window=10).fit(X)
-    X_std = st_sc.transform(X)
-    print(X_std)
-
-    mm_sc = MovingMinMaxScaler(window=10).fit(X)
-    X_mm = mm_sc.transform(X)
-    print(X_mm)
-    print("_"*80)
-    print(st_sc.buffer_)
-    print(mm_sc.buffer_)
-    print("_"*80)
-    print(last)
-    print(st_sc.transform(last))
-    print(mm_sc.transform(last))"""
     print(SCALERS_TRANSFORMERS.fit_transform(X))
 
     print(SCALERS_TRANSFORMERS.transformer_list[:][0])
